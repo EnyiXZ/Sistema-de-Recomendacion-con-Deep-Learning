@@ -33,10 +33,16 @@ Una sola tabla con interacciones históricas usuario–producto.
 | `IS_TRENDING` | Binario | 1 si el producto es tendencia, 0 si no |
 | `PURCHASE` | Binario | **Target** — 1 si hubo compra, 0 si no |
 
+> [!IMPORTANT]
+> **El dataset es 100 % sintético**, generado artificialmente para este proyecto.
+> No contiene datos reales de personas ni de compras; los `USER_ID`, productos e
+> interacciones son inventados. Su único fin es demostrar la arquitectura y el flujo
+> del sistema de recomendación.
+
 > [!NOTE]
 > El notebook carga el CSV desde una ruta de Kaggle
-> (`/kaggle/input/.../recomendaciones.csv`). Ajusta la ruta de la celda de carga
-> si lo ejecutas en local.
+> (`/kaggle/input/.../recomendaciones.csv`). Si lo ejecutas en local, descarga el CSV
+> y ajusta la ruta del `pd.read_csv(...)` en la celda de carga.
 
 ### Hallazgos del EDA
 
