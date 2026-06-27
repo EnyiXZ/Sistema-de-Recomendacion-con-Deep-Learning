@@ -1,75 +1,142 @@
-# Sistema de Recomendación Personalizado con Deep Learning
+<div align="center">
 
-Este repositorio contiene el desarrollo completo de un **Sistema de Recomendación Inteligente** diseñado bajo un enfoque de aprendizaje supervisado profundo (Deep Learning). El modelo predice la probabilidad de que un usuario adquiera un producto específico basándose en su historial de interacciones y en atributos contextuales (categoría, estilo, temporada y tendencias), permitiendo tanto la generación de recomendaciones personalizadas como la resolución del problema de inicio en frío (*Cold Start*).
+# 🎯 Sistema de Recomendación con Deep Learning
 
-## 📋 Objetivo del Proyecto
+### Red neuronal con *embeddings* que predice la probabilidad de compra y genera recomendaciones personalizadas
 
-El objetivo principal es construir y entrenar una red neuronal profunda en TensorFlow/Keras utilizando capas de **Embeddings** para mapear variables categóricas (usuarios, productos y contextos) en espacios vectoriales continuos, capturando relaciones complejas de afinidad para optimizar las tasas de conversión (conversión de clicks a compras).
+[![Python](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![TensorFlow](https://img.shields.io/badge/TensorFlow-2.15+-FF6F00?logo=tensorflow&logoColor=white)](https://www.tensorflow.org/)
+[![scikit-learn](https://img.shields.io/badge/scikit--learn-F7931E?logo=scikit-learn&logoColor=white)](https://scikit-learn.org/)
+[![Keras](https://img.shields.io/badge/Keras-Functional%20API-D00000?logo=keras&logoColor=white)](https://keras.io/)
 
-## 📊 Estructura y Análisis del Dataset
+</div>
 
-El proyecto trabaja sobre una única tabla estructurada con **5,000 interacciones históricas** entre **200 usuarios únicos** y un catálogo de **50 productos únicos**. 
+---
 
-### Atributos del Dataset:
+Sistema de recomendación basado en **Deep Learning supervisado**. Una red neuronal con capas de *embedding* aprende representaciones densas de usuarios, productos y contexto (categoría, estilo, temporada, tendencia) para predecir la probabilidad de que un usuario compre un producto, y a partir de ahí generar recomendaciones **Top-K** personalizadas. Incluye además un mecanismo de respaldo para el problema de **inicio en frío** (*cold start*).
+
+## 📋 Objetivo
+
+Entrenar una red en **TensorFlow / Keras (API funcional)** que mapee variables categóricas a espacios vectoriales continuos mediante *embeddings*, capturando afinidades complejas usuario–producto para estimar la conversión de clic a compra.
+
+## 📊 Dataset
+
+Una sola tabla con interacciones históricas usuario–producto.
 
 | Columna | Tipo | Descripción |
-| :--- | :--- | :--- |
-| **USER_ID** | Int (Cat) | Identificador único del cliente (200 usuarios). |
-| **ITEM_ID** | Int (Cat) | Identificador único del producto (50 ítems). |
-| **CATEGORY** | String | Tipo de prenda (shoes, tshirt, jacket, dress, bag, etc.). |
-| **STYLE** | String | Enfoque de la prenda (casual, elegant, sport, urban). |
-| **SEASON** | String | Estacionalidad óptima (summer, winter, spring, autumn). |
-| **IS_TRENDING**| Binario | Indica si el producto es tendencia actual (1) o no (0). |
-| **PURCHASE** | Binario | **Target (Variable Objetivo)**: 1 si se efectuó la compra, 0 si no. |
+|---|---|---|
+| `USER_ID` | Int (cat.) | Identificador del usuario |
+| `ITEM_ID` | Int (cat.) | Identificador del producto |
+| `CATEGORY` | String | Tipo de prenda (`shoes`, `tshirt`, `jacket`, `dress`, `bag`…) |
+| `STYLE` | String | Estilo (`casual`, `elegant`, `sport`, `urban`) |
+| `SEASON` | String | Temporada (`summer`, `winter`, `spring`, `autumn`) |
+| `IS_TRENDING` | Binario | 1 si el producto es tendencia, 0 si no |
+| `PURCHASE` | Binario | **Target** — 1 si hubo compra, 0 si no |
 
-### Insights Clave del EDA:
-* **Desbalanceo de Clases:** El dataset presenta un sesgo hacia la no-compra, con un **ratio de conversión general del 25.4%** (3,728 instancias de no-compra frente a 1,272 de compra).
-* **Impacto de Tendencias:** Los productos marcados como *Trending* exhiben un ratio de compra significativamente mayor (36.9%) en comparación con los no-trending (20.5%).
-* **Densidad por Usuario:** Los usuarios promedian 25 interacciones dentro del histórico, con un rango controlado de entre 16 como mínimo y 41 como máximo.
+> [!NOTE]
+> El notebook carga el CSV desde una ruta de Kaggle
+> (`/kaggle/input/.../recomendaciones.csv`). Ajusta la ruta de la celda de carga
+> si lo ejecutas en local.
 
-## 🧠 Arquitectura del Modelo
+### Hallazgos del EDA
 
-Para procesar la naturaleza dispersa de los IDs de usuario y artículo junto con sus metadatos, se diseñó una arquitectura de red híbrida utilizando la API funcional de Keras:
+- **Clases desbalanceadas:** ratio de conversión ≈ **25,4 %** (sesgo hacia la no-compra).
+- **Las tendencias importan:** los productos *trending* se compran bastante más (≈ 36,9 %) que los no-trending (≈ 20,5 %), señal de que `IS_TRENDING` tiene poder predictivo.
+- **Densidad por usuario:** ~25 interacciones de media por usuario (rango ~16–41).
 
-1. **Capas de Embedding independientes:**
-   * `USER_ID` $\rightarrow$ Vectores densos de dimensión 16.
-   * `ITEM_ID` $\rightarrow$ Vectores densos de dimensión 16.
-   * `CATEGORY` $\rightarrow$ Vectores densos de dimensión 8.
-   * `STYLE` $\rightarrow$ Vectores densos de dimensión 8.
-   * `SEASON` $\rightarrow$ Vectores densos de dimensión 4.
-2. **Fusión de Características:** Extracción y aplanado (`Flatten`) de las salidas de los embeddings para su posterior concatenación (`Concatenate`) junto con la señal binaria de `IS_TRENDING`.
-3. **Bloques Densos Avanzados:** 
-   * Capa totalmente conectada de 128 neuronas + Normalización por Lote (`BatchNormalization`) + `Dropout(0.3)`.
-   * Capa totalmente conectada de 64 neuronas + `BatchNormalization` + `Dropout(0.2)`.
-   * Capa totalmente conectada de 32 neuronas con activación ReLU.
-4. **Capa de Salida:** Una única neurona con función de activación `Sigmoid` para retornar un valor probabilístico continuo en el rango $[0, 1]$.
+## 🧠 Arquitectura del modelo
 
-## ⚙️ Estrategia de Entrenamiento y Regularización
+```mermaid
+flowchart LR
+    U[USER_ID] --> UE["Embedding 16"] --> UF[Flatten]
+    I[ITEM_ID] --> IE["Embedding 16"] --> IF[Flatten]
+    C[CATEGORY] --> CE["Embedding 8"] --> CF[Flatten]
+    S[STYLE] --> SE["Embedding 8"] --> SF[Flatten]
+    SEA[SEASON] --> SAE["Embedding 4"] --> SAF[Flatten]
+    T[IS_TRENDING] --> CAT
 
-Para contrarrestar el desbalanceo de la variable objetivo y garantizar la estabilidad del entrenamiento se implementaron las siguientes técnicas:
-* **Pesos de Clase Suavizados:** Aplicación de penalizaciones personalizadas en la función de pérdida calculadas mediante la raíz cuadrada de la proporción inversa de las clases (`{0: 1.0, 1: 1.7115}`).
-* **Mecanismos de Control (Callbacks):**
-  * `EarlyStopping`: Interrupción del entrenamiento tras 8 épocas consecutivas sin mejoras en la pérdida de validación (`val_loss`), restaurando los mejores pesos.
-  * `ReduceLROnPlateau`: Reducción del factor de aprendizaje por un coeficiente de 0.2 ante el estancamiento de la convergencia.
+    UF --> CAT[Concatenate]
+    IF --> CAT
+    CF --> CAT
+    SF --> CAT
+    SAF --> CAT
 
-## 📈 Resultados de Rendimiento
+    CAT --> D1["Dense 128 + BatchNorm + Dropout 0.3"]
+    D1 --> D2["Dense 64 + BatchNorm + Dropout 0.2"]
+    D2 --> D3["Dense 32 · ReLU"]
+    D3 --> O["Dense 1 · Sigmoid → prob. compra"]
 
-Tras la convergencia y detención temprana en la época 13, el modelo obtuvo las siguientes métricas de rendimiento sobre el conjunto de test independiente (20% de los datos):
+    style O fill:#2ea44f,color:#fff
+    style CAT fill:#3776AB,color:#fff
+```
 
-* **Loss (Binary Crossentropy):** 0.5758
-* **Accuracy General:** 72.60%
-* **Área Bajo la Curva (AUC - ROC):** 0.6058
+| Componente | Detalle |
+|---|---|
+| Embeddings | `USER_ID`→16, `ITEM_ID`→16, `CATEGORY`→8, `STYLE`→8, `SEASON`→4 |
+| Fusión | `Flatten` de cada embedding + `Concatenate` con la señal `IS_TRENDING` |
+| Capas densas | 128 → 64 → 32, con `BatchNormalization` y `Dropout` (0.3 / 0.2) en las dos primeras |
+| Salida | `Dense(1, sigmoid)` → probabilidad en `[0, 1]` |
 
-## 🎯 Capacidades del Motor de Recomendación
+## ⚙️ Entrenamiento y regularización
 
-El sistema cuenta con funciones avanzadas integradas listas para producción:
-1. **Recomendación Personalizada:** Dado un `USER_ID` activo, el sistema genera dinámicamente predicciones sintéticas cruzando al usuario con todo el catálogo de productos disponibles bajo el contexto actual del mercado, ordenando y devolviendo los Top-K productos con mayor probabilidad de compra.
-2. **Mitigación de Inicio en Frío (Cold Start):** En caso de ingresar un usuario completamente nuevo sin historial en la matriz de embeddings, el sistema activa un método heurístico de respaldo que recomienda los productos con mayor rendimiento global basándose puramente en las combinaciones óptimas de categorías y tendencias vigentes.
+| Técnica | Configuración |
+|---|---|
+| Optimizer / Loss | `adam` / `binary_crossentropy` |
+| Métricas | `accuracy`, `AUC` |
+| Pesos de clase | `{0: 1.0, 1: √(neg/pos)}` ≈ `{0: 1.0, 1: 1.71}` (raíz de la proporción inversa, suaviza el desbalanceo) |
+| `EarlyStopping` | `patience=8`, restaura los mejores pesos según `val_loss` |
+| `ReduceLROnPlateau` | `factor=0.2`, `patience=3`, `min_lr=1e-4` |
+| Split | 80 / 20, estratificado, `random_state=42` |
+| Reproducibilidad | Semilla `42` en Python, NumPy y TensorFlow |
 
-## 🛠️ Requisitos del Sistema
+## 📈 Resultados (test, 20 % de los datos)
 
-* Python 3.10+
-* TensorFlow 2.15+ / 2.19
-* Scikit-Learn
-* Pandas & NumPy
-* Matplotlib & Seaborn
+| Métrica | Valor |
+|---|---|
+| Loss (BCE) | 0,5758 |
+| Accuracy | 72,60 % |
+| AUC (ROC) | 0,6058 |
+
+> [!IMPORTANT]
+> El AUC ronda **0,61**: mejor que el azar (0,5) pero modesto. Es un resultado
+> honesto para un **dataset sintético** con pocas features. No es un modelo
+> "de producción", sino una demostración correcta de la arquitectura y el flujo.
+
+## 🎯 Motor de recomendación
+
+1. **Recomendación personalizada** — para un `USER_ID` conocido, se cruza al usuario con todo el catálogo (excluyendo lo que ya compró), se predice la probabilidad de compra de cada producto y se devuelven los **Top-K** con mayor score.
+2. **Cold start** — para un usuario nuevo sin historial (sin embedding entrenado), se cae a una heurística que ordena el catálogo por `purchase_rate + is_trending · 0.2` y recomienda los más populares/trending.
+
+## 🛠️ Requisitos
+
+```
+python >= 3.10
+tensorflow >= 2.15
+scikit-learn
+pandas
+numpy
+matplotlib
+seaborn
+```
+
+```bash
+pip install tensorflow scikit-learn pandas numpy matplotlib seaborn
+```
+
+## ▶️ Uso
+
+1. Coloca el CSV y ajusta la ruta en la celda de carga (`pd.read_csv(...)`).
+2. Ejecuta el notebook de arriba a abajo: EDA → encoding → split → modelo → entrenamiento → evaluación → recomendaciones.
+
+## 🚀 Mejoras posibles
+
+- Probar con un dataset real (MovieLens, RetailRocket).
+- Añadir features de usuario (edad, presupuesto…).
+- Arquitecturas más expresivas (Wide & Deep, Neural Collaborative Filtering).
+- Métricas de ranking (NDCG@K, MAP) además de AUC.
+
+---
+
+<div align="center">
+<sub>Proyecto de demostración — arquitectura embeddings + capas densas para recomendación.</sub>
+</div>
